@@ -12,6 +12,16 @@ David Kariuki
 
 ## Changelog
 
+### 1.2.3 - 2025
+- Fixed assessment results email sending functionality
+- Added comprehensive error handling for email submissions
+- Improved client-side email validation
+- Enhanced error messaging and user feedback
+- Added detailed server-side error logging
+- Fixed AJAX response handling
+- Improved database error handling
+- Added proper security nonce verification
+
 ### 1.2.2 - 2025
 - Fixed email sending functionality
 - Added detailed SMTP error logging

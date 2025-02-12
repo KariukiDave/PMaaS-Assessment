@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.2
+ * Version: 1.2.3
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -100,19 +100,32 @@ function pmat_send_assessment_email($name, $email, $results) {
     wp_mail($email, $subject, $message, $headers);
 }
 
-// AJAX handler function
+// Update the assessment results handler with better error handling
 function pmat_handle_assessment_results() {
-    // Get and sanitize the submitted data
-    $name = sanitize_text_field($_POST['name']);
-    $email = sanitize_email($_POST['email']);
-    $score = intval($_POST['score']);
-    $recommendation = $_POST['recommendation'];
-    $selections = $_POST['selections'];
-
-    // Configure SMTP
-    add_action('phpmailer_init', 'pmat_configure_smtp');
-
     try {
+        // Verify AJAX request
+        if (!wp_verify_nonce($_REQUEST['nonce'], 'pmat_admin_nonce')) {
+            throw new Exception('Security check failed');
+        }
+
+        // Get and sanitize the submitted data
+        if (!isset($_POST['name']) || !isset($_POST['email'])) {
+            throw new Exception('Required fields are missing');
+        }
+
+        $name = sanitize_text_field($_POST['name']);
+        $email = sanitize_email($_POST['email']);
+        $score = isset($_POST['score']) ? intval($_POST['score']) : 0;
+        $recommendation = isset($_POST['recommendation']) ? $_POST['recommendation'] : array();
+        $selections = isset($_POST['selections']) ? $_POST['selections'] : array();
+
+        if (empty($email) || !is_email($email)) {
+            throw new Exception('Invalid email address');
+        }
+
+        // Configure SMTP before sending
+        add_action('phpmailer_init', 'pmat_configure_smtp');
+
         // Format selections for email
         $formatted_selections = array();
         foreach ($selections as $selection) {
@@ -125,7 +138,7 @@ function pmat_handle_assessment_results() {
         // Prepare result data for email template
         $result = array(
             'text' => wp_strip_all_tags($recommendation['text']),
-            'icon' => $recommendation['icon']
+            'icon' => $recommendation['icon'] // SVG is allowed
         );
 
         // Generate email content
@@ -146,14 +159,45 @@ function pmat_handle_assessment_results() {
         // Send email
         $sent = wp_mail($email, "Your Project Management Assessment Results", $email_content, $headers);
 
-        if ($sent) {
-            wp_send_json_success(array('message' => 'Email sent successfully'));
-        } else {
+        if (!$sent) {
             global $phpmailer;
-            wp_send_json_error(array('message' => 'Failed to send email: ' . $phpmailer->ErrorInfo));
+            if (isset($phpmailer) && isset($phpmailer->ErrorInfo)) {
+                throw new Exception('Email sending failed: ' . $phpmailer->ErrorInfo);
+            } else {
+                throw new Exception('Email sending failed');
+            }
         }
+
+        // Save to database if email was sent successfully
+        global $wpdb;
+        $table_name = $wpdb->prefix . 'pm_assessments';
+        
+        $wpdb->insert(
+            $table_name,
+            array(
+                'name' => $name,
+                'email' => $email,
+                'score' => $score,
+                'recommendation' => json_encode($recommendation),
+                'selections' => json_encode($selections),
+                'email_sent' => 1,
+                'date_created' => current_time('mysql')
+            ),
+            array('%s', '%s', '%d', '%s', '%s', '%d', '%s')
+        );
+
+        if ($wpdb->last_error) {
+            error_log('Database error: ' . $wpdb->last_error);
+            // Continue even if DB save fails, as email was sent
+        }
+
+        wp_send_json_success(array('message' => 'Results sent successfully'));
+
     } catch (Exception $e) {
-        wp_send_json_error(array('message' => 'Exception occurred: ' . $e->getMessage()));
+        error_log('PM Assessment Tool - Email Error: ' . $e->getMessage());
+        wp_send_json_error(array(
+            'message' => $e->getMessage()
+        ));
     }
 }
 
@@ -251,7 +295,7 @@ function pmat_deactivate() {
     // Any cleanup tasks if needed
 }
 
-// Add AJAX handler for dashboard data
+// Update the dashboard data handler
 function pmat_get_dashboard_data() {
     check_ajax_referer('pmat_admin_nonce', 'nonce');
 
@@ -261,7 +305,7 @@ function pmat_get_dashboard_data() {
     // Get data for the last 30 days
     $thirty_days_ago = date('Y-m-d', strtotime('-30 days'));
     
-    // Get daily assessments
+    // Get daily assessments (all assessments, not just emailed ones)
     $daily_assessments = $wpdb->get_results($wpdb->prepare(
         "SELECT DATE(date_created) as date, COUNT(*) as count 
          FROM $table_name 
@@ -271,14 +315,25 @@ function pmat_get_dashboard_data() {
         $thirty_days_ago
     ));
 
-    // Get recommendation distribution
+    // Get recommendation distribution (all assessments)
     $recommendations = $wpdb->get_results(
-        "SELECT recommendation, COUNT(*) as count 
+        "SELECT 
+            CASE 
+                WHEN score >= 80 THEN 'Internal'
+                WHEN score >= 50 THEN 'Hybrid'
+                ELSE 'PMaaS'
+            END as recommendation,
+            COUNT(*) as count 
          FROM $table_name 
-         GROUP BY recommendation"
+         GROUP BY 
+            CASE 
+                WHEN score >= 80 THEN 'Internal'
+                WHEN score >= 50 THEN 'Hybrid'
+                ELSE 'PMaaS'
+            END"
     );
 
-    // Get daily emails sent
+    // Get daily emails (only where email_sent = 1)
     $daily_emails = $wpdb->get_results($wpdb->prepare(
         "SELECT DATE(date_created) as date, COUNT(*) as count 
          FROM $table_name 
@@ -296,28 +351,54 @@ function pmat_get_dashboard_data() {
     $emailsSent = array();
     $recommendationCounts = array(0, 0, 0); // PMaaS, Hybrid, Internal
 
+    // Fill in missing dates with zero counts for assessments
+    $date = new DateTime($thirty_days_ago);
+    $end_date = new DateTime();
+    $daily_data = array();
+
+    while ($date <= $end_date) {
+        $current_date = $date->format('Y-m-d');
+        $dates[] = $date->format('M j');
+        $daily_data[$current_date] = 0;
+        $date->modify('+1 day');
+    }
+
     // Process daily assessments
     foreach ($daily_assessments as $day) {
-        $dates[] = date('M j', strtotime($day->date));
-        $assessments[] = (int)$day->count;
+        $daily_data[$day->date] = (int)$day->count;
     }
+    $assessments = array_values($daily_data);
 
     // Process recommendation distribution
     foreach ($recommendations as $rec) {
-        if (strpos($rec->recommendation, 'PMaaS') !== false) {
-            $recommendationCounts[0] = (int)$rec->count;
-        } elseif (strpos($rec->recommendation, 'Hybrid') !== false) {
-            $recommendationCounts[1] = (int)$rec->count;
-        } else {
-            $recommendationCounts[2] = (int)$rec->count;
+        switch ($rec->recommendation) {
+            case 'PMaaS':
+                $recommendationCounts[0] = (int)$rec->count;
+                break;
+            case 'Hybrid':
+                $recommendationCounts[1] = (int)$rec->count;
+                break;
+            case 'Internal':
+                $recommendationCounts[2] = (int)$rec->count;
+                break;
         }
+    }
+
+    // Fill in missing dates with zero counts for emails
+    $email_data = array();
+    $date->setTimestamp(strtotime($thirty_days_ago));
+    while ($date <= $end_date) {
+        $current_date = $date->format('Y-m-d');
+        $emailDates[] = $date->format('M j');
+        $email_data[$current_date] = 0;
+        $date->modify('+1 day');
     }
 
     // Process daily emails
     foreach ($daily_emails as $day) {
-        $emailDates[] = date('M j', strtotime($day->date));
-        $emailsSent[] = (int)$day->count;
+        $email_data[$day->date] = (int)$day->count;
     }
+    $emailsSent = array_values($email_data);
 
     wp_send_json_success(array(
         'dates' => $dates,

@@ -186,13 +186,15 @@ jQuery(document).ready(function($) {
             icon: visibleResult.find('svg').prop('outerHTML')
         };
 
-        $(this).prop('disabled', true).text('Sending...');
+        const button = $(this);
+        button.prop('disabled', true).text('Sending...');
 
         $.ajax({
             url: pmatAjax.ajaxurl,
             type: 'POST',
             data: {
                 action: 'save_assessment_results',
+                nonce: pmatAjax.nonce,
                 name: name,
                 email: email,
                 score: percentageScore,
@@ -203,21 +205,23 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     alert('Results have been sent to your email!');
                 } else {
-                    alert('Error: ' + (response.data.message || 'Failed to send email. Please try again.'));
+                    alert('Error: ' + (response.data.message || 'Failed to send results. Please try again.'));
                 }
-                $('#send-results').prop('disabled', false).text('Send Results');
             },
             error: function(xhr, status, error) {
-                alert('Error: ' + error);
-                $('#send-results').prop('disabled', false).text('Send Results');
+                console.error('AJAX Error:', status, error);
+                alert('Error sending results. Please try again or contact support.');
+            },
+            complete: function() {
+                button.prop('disabled', false).text('Send Results');
             }
         });
     });
 
     // Email validation function
     function isValidEmail(email) {
-        const regex = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/;
-        return regex.test(email);
+        const re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(String(email).toLowerCase());
     }
 
     // Retake assessment
