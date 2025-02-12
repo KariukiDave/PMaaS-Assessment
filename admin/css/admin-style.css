@@ -32,7 +32,7 @@
 
 .pmat-charts-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 20px;
     margin-top: 20px;
 }
@@ -42,16 +42,21 @@
     padding: 20px;
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    height: 350px; /* Fixed height for all charts */
+    display: flex;
+    flex-direction: column;
 }
 
 .pmat-chart-card h3 {
     color: #080244;
-    margin: 0 0 20px 0;
+    margin: 0 0 15px 0;
     font-size: 16px;
+    flex: 0 0 auto;
 }
 
 .pmat-chart-card canvas {
-    min-height: 300px;
+    flex: 1;
+    max-height: 285px; /* 350px - padding - heading */
 }
 
 @media screen and (max-width: 782px) {
@@ -59,8 +64,12 @@
         grid-template-columns: 1fr;
     }
     
+    .pmat-chart-card {
+        height: 300px; /* Slightly smaller on mobile */
+    }
+    
     .pmat-chart-card canvas {
-        min-height: 250px;
+        max-height: 235px;
     }
 }
 
