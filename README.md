@@ -12,6 +12,16 @@ David Kariuki
 
 ## Changelog
 
+### 1.2.6 - 2025
+- Enhanced email template design
+- Added Creative Bits logo to email header
+- Converted assessment responses to responsive table format
+- Added contact information section
+- Improved mobile responsiveness of email
+- Updated email styling with brand colors
+- Added clickable contact links
+- Optimized email layout and spacing
+
 ### 1.2.5 - 2025
 - Fixed assessment results email delivery issues
 - Improved email content generation

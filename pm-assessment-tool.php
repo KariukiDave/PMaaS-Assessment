@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.5
+ * Version: 1.2.6
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -199,30 +199,34 @@ function pmat_handle_assessment_results() {
     }
 }
 
-// Update the email content generation function
+// Update the email content generation function with improved layout
 function pmat_generate_email_content($name, $score, $recommendation, $selections) {
-    // Start with basic HTML structure
+    // Get plugin directory URL for the logo
+    $plugin_url = plugin_dir_url(__FILE__);
+    
     $content = '<!DOCTYPE html>
                 <html>
                 <head>
                     <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Assessment Results</title>
                 </head>
-                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">';
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">';
 
-    // Add header with logo if exists
+    // Add header with logo
     $content .= '<div style="background-color: #080244; padding: 20px; text-align: center;">
-                    <h1 style="color: #ffffff;">Your Project Management Assessment Results</h1>
+                    <img src="' . $plugin_url . 'assets/images/creative-bits-logo.png" alt="Creative Bits Logo" style="max-width: 200px; height: auto;">
+                    <h1 style="color: #ffffff; margin-top: 15px;">Your Project Management Assessment Results</h1>
                  </div>';
 
     // Add personal greeting
-    $content .= '<div style="padding: 20px;">
+    $content .= '<div style="padding: 20px; max-width: 600px; margin: 0 auto;">
                     <p>Dear ' . esc_html($name) . ',</p>
                     <p>Thank you for completing the Project Management Assessment. Here are your results:</p>';
 
     // Add score section
     $content .= '<div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
-                    <h2>Your Score: ' . esc_html($score) . '%</h2>
+                    <h2 style="margin: 0;">Your Score: ' . esc_html($score) . '%</h2>
                  </div>';
 
     // Add recommendation section
@@ -231,23 +235,36 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
                     <p>' . (isset($recommendation['text']) ? esc_html($recommendation['text']) : '') . '</p>
                  </div>';
 
-    // Add responses section if available
+    // Add responses section as a responsive table
     if (!empty($selections)) {
         $content .= '<div style="margin: 20px 0;">
                         <h2>Your Responses</h2>
-                        <ul style="list-style-type: none; padding: 0;">';
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                            <thead>
+                                <tr style="background-color: #080244; color: white;">
+                                    <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Question</th>
+                                    <th style="padding: 12px; text-align: left; border: 1px solid #ddd;">Your Answer</th>
+                                </tr>
+                            </thead>
+                            <tbody>';
         
         foreach ($selections as $selection) {
             if (isset($selection['question']) && isset($selection['answer'])) {
-                $content .= '<li style="margin-bottom: 15px;">
-                                <strong>' . esc_html($selection['question']) . '</strong><br>
-                                ' . esc_html($selection['answer']) . '
-                           </li>';
+                $content .= '<tr>
+                                <td style="padding: 12px; border: 1px solid #ddd;">' . esc_html($selection['question']) . '</td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">' . esc_html($selection['answer']) . '</td>
+                            </tr>';
             }
         }
         
-        $content .= '</ul></div>';
+        $content .= '</tbody></table></div>';
     }
+
+    // Add contact section
+    $content .= '<div style="margin-top: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 5px;">
+                    <p style="margin-bottom: 0;">Need help managing and automating your projects? Our team of experts is ready to assist you.</p>
+                    <p style="margin-top: 10px;">Get in touch with us at <a href="mailto:info@creativebits.us" style="color: #fd611c; text-decoration: none;">info@creativebits.us</a> or visit our website <a href="https://creativebits.us" style="color: #fd611c; text-decoration: none;">creativebits.us</a></p>
+                 </div>';
 
     // Add footer
     $content .= '<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
