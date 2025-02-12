@@ -12,7 +12,14 @@ David Kariuki
 
 ## Changelog
 
-### 1.2.0 - 2024
+### 1.2.1 - 2025
+- Optimized dashboard chart sizes for better visibility
+- Improved chart layout and responsiveness
+- Enhanced data visualization with better spacing
+- Updated chart legends positioning
+- Fixed chart height consistency issues
+
+### 1.2.0 - 2025
 - Added automatic updates from GitHub repository
 - Added update notifications in WordPress plugins page
 - Added detailed changelog in update notifications
