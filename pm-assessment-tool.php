@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.4
+ * Version: 1.2.5
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -101,54 +101,45 @@ function pmat_send_assessment_email($name, $email, $results) {
     wp_mail($email, $subject, $message, $headers);
 }
 
-// Update the assessment results handler with better error handling
+// Update the assessment results handler with improved debugging
 function pmat_handle_assessment_results() {
     try {
-        // Update nonce verification
-        if (!check_ajax_referer('pmat_assessment_nonce', 'nonce', false)) {
-            throw new Exception('Security check failed');
-        }
+        // Verify AJAX request
+        check_ajax_referer('pmat_assessment_nonce', 'nonce');
+
+        // Log incoming data for debugging
+        error_log('PM Assessment - Incoming Data: ' . print_r($_POST, true));
 
         // Get and sanitize the submitted data
-        if (!isset($_POST['name']) || !isset($_POST['email'])) {
-            throw new Exception('Required fields are missing');
+        $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
+        $email = isset($_POST['email']) ? sanitize_email($_POST['email']) : '';
+        $score = isset($_POST['score']) ? intval($_POST['score']) : 0;
+        
+        // Validate required fields
+        if (empty($name) || empty($email)) {
+            throw new Exception('Name and email are required');
         }
 
-        $name = sanitize_text_field($_POST['name']);
-        $email = sanitize_email($_POST['email']);
-        $score = isset($_POST['score']) ? intval($_POST['score']) : 0;
-        $recommendation = isset($_POST['recommendation']) ? $_POST['recommendation'] : array();
-        $selections = isset($_POST['selections']) ? $_POST['selections'] : array();
-
-        if (empty($email) || !is_email($email)) {
+        if (!is_email($email)) {
             throw new Exception('Invalid email address');
         }
 
-        // Configure SMTP before sending
-        add_action('phpmailer_init', 'pmat_configure_smtp');
-
-        // Format selections for email
-        $formatted_selections = array();
-        foreach ($selections as $selection) {
-            if (isset($selection['question']) && isset($selection['answer'])) {
-                $formatted_selections[wp_strip_all_tags($selection['question'])] = 
-                    wp_strip_all_tags($selection['answer']);
-            }
+        // Ensure recommendation data exists
+        if (!isset($_POST['recommendation']) || empty($_POST['recommendation'])) {
+            throw new Exception('Recommendation data is missing');
         }
 
-        // Prepare result data for email template
-        $result = array(
-            'text' => wp_strip_all_tags($recommendation['text']),
-            'icon' => $recommendation['icon'] // SVG is allowed
-        );
+        $recommendation = $_POST['recommendation'];
+        $selections = isset($_POST['selections']) ? $_POST['selections'] : array();
 
-        // Generate email content
-        $email_content = pmat_generate_email_content($formatted_selections, $result);
+        // Generate email content first to catch any potential issues
+        $email_content = pmat_generate_email_content($name, $score, $recommendation, $selections);
 
-        // Email headers
+        // Configure email settings
+        $subject = "Your Project Management Assessment Results";
         $headers = array(
             'Content-Type: text/html; charset=UTF-8',
-            'From: ' . get_option('pmat_from_name') . ' <' . get_option('pmat_from_email') . '>'
+            'From: ' . get_option('pmat_from_name', 'PM Assessment Tool') . ' <' . get_option('pmat_from_email', '') . '>'
         );
 
         // Add Reply-To if set
@@ -157,29 +148,32 @@ function pmat_handle_assessment_results() {
             $headers[] = 'Reply-To: ' . $reply_to_email;
         }
 
+        // Configure SMTP before sending
+        add_action('phpmailer_init', 'pmat_configure_smtp');
+
         // Send email
-        $sent = wp_mail($email, "Your Project Management Assessment Results", $email_content, $headers);
+        $sent = wp_mail($email, $subject, $email_content, $headers);
 
         if (!$sent) {
             global $phpmailer;
-            if (isset($phpmailer) && isset($phpmailer->ErrorInfo)) {
-                throw new Exception('Email sending failed: ' . $phpmailer->ErrorInfo);
-            } else {
-                throw new Exception('Email sending failed');
-            }
+            $error_msg = isset($phpmailer) && isset($phpmailer->ErrorInfo) 
+                ? $phpmailer->ErrorInfo 
+                : 'Unknown error occurred while sending email';
+            error_log('PM Assessment - Email Error: ' . $error_msg);
+            throw new Exception($error_msg);
         }
 
-        // Save to database if email was sent successfully
+        // Save to database only if email was sent successfully
         global $wpdb;
         $table_name = $wpdb->prefix . 'pm_assessments';
         
-        $wpdb->insert(
+        $insert_result = $wpdb->insert(
             $table_name,
             array(
                 'name' => $name,
                 'email' => $email,
                 'score' => $score,
-                'recommendation' => json_encode($recommendation),
+                'recommendation' => is_array($recommendation) ? json_encode($recommendation) : $recommendation,
                 'selections' => json_encode($selections),
                 'email_sent' => 1,
                 'date_created' => current_time('mysql')
@@ -187,19 +181,82 @@ function pmat_handle_assessment_results() {
             array('%s', '%s', '%d', '%s', '%s', '%d', '%s')
         );
 
-        if ($wpdb->last_error) {
-            error_log('Database error: ' . $wpdb->last_error);
-            // Continue even if DB save fails, as email was sent
+        if ($insert_result === false) {
+            error_log('PM Assessment - Database Error: ' . $wpdb->last_error);
+            // Don't throw exception here as email was sent successfully
         }
 
-        wp_send_json_success(array('message' => 'Results sent successfully'));
+        wp_send_json_success(array(
+            'message' => 'Results sent successfully'
+        ));
 
     } catch (Exception $e) {
-        error_log('PM Assessment Tool - Email Error: ' . $e->getMessage());
+        error_log('PM Assessment - Error: ' . $e->getMessage());
+        error_log('PM Assessment - Stack Trace: ' . $e->getTraceAsString());
         wp_send_json_error(array(
             'message' => $e->getMessage()
         ));
     }
+}
+
+// Update the email content generation function
+function pmat_generate_email_content($name, $score, $recommendation, $selections) {
+    // Start with basic HTML structure
+    $content = '<!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <title>Assessment Results</title>
+                </head>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">';
+
+    // Add header with logo if exists
+    $content .= '<div style="background-color: #080244; padding: 20px; text-align: center;">
+                    <h1 style="color: #ffffff;">Your Project Management Assessment Results</h1>
+                 </div>';
+
+    // Add personal greeting
+    $content .= '<div style="padding: 20px;">
+                    <p>Dear ' . esc_html($name) . ',</p>
+                    <p>Thank you for completing the Project Management Assessment. Here are your results:</p>';
+
+    // Add score section
+    $content .= '<div style="background-color: #f5f5f5; padding: 15px; margin: 20px 0; border-radius: 5px;">
+                    <h2>Your Score: ' . esc_html($score) . '%</h2>
+                 </div>';
+
+    // Add recommendation section
+    $content .= '<div style="margin: 20px 0;">
+                    <h2>Recommendation</h2>
+                    <p>' . (isset($recommendation['text']) ? esc_html($recommendation['text']) : '') . '</p>
+                 </div>';
+
+    // Add responses section if available
+    if (!empty($selections)) {
+        $content .= '<div style="margin: 20px 0;">
+                        <h2>Your Responses</h2>
+                        <ul style="list-style-type: none; padding: 0;">';
+        
+        foreach ($selections as $selection) {
+            if (isset($selection['question']) && isset($selection['answer'])) {
+                $content .= '<li style="margin-bottom: 15px;">
+                                <strong>' . esc_html($selection['question']) . '</strong><br>
+                                ' . esc_html($selection['answer']) . '
+                           </li>';
+            }
+        }
+        
+        $content .= '</ul></div>';
+    }
+
+    // Add footer
+    $content .= '<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p>Best regards,<br>Creative Bits Team</p>
+                 </div>';
+
+    $content .= '</div></body></html>';
+
+    return $content;
 }
 
 // Admin Menu

@@ -12,6 +12,16 @@ David Kariuki
 
 ## Changelog
 
+### 1.2.5 - 2025
+- Fixed assessment results email delivery issues
+- Improved email content generation
+- Enhanced error logging and debugging
+- Added detailed data validation
+- Improved HTML email template
+- Added proper data sanitization
+- Enhanced database error handling
+- Added comprehensive error reporting
+
 ### 1.2.4 - 2025
 - Fixed security nonce verification in assessment submissions
 - Updated AJAX nonce handling
