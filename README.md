@@ -12,7 +12,7 @@ David Kariuki
 
 ## Changelog
 
-### 1.2.2 - 2024
+### 1.2.2 - 2025
 - Fixed email sending functionality
 - Added detailed SMTP error logging
 - Improved error handling and user feedback
@@ -21,7 +21,7 @@ David Kariuki
 - Fixed test email functionality in settings
 - Improved error messages display
 
-### 1.2.1 - 2024
+### 1.2.1 - 2025
 - Optimized dashboard chart sizes for better visibility
 - Improved chart layout and responsiveness
 - Enhanced data visualization with better spacing
@@ -34,7 +34,7 @@ David Kariuki
 - Added detailed changelog in update notifications
 - Added compatibility checks for WordPress and PHP versions
 
-### 1.1.0 - 2024
+### 1.1.0 - 2025
 - Added comprehensive admin dashboard with analytics
   - Assessment trends chart
   - Recommendation distribution chart
