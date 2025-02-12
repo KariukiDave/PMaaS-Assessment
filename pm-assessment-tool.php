@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: Project Management Assessment Tool
+ * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
  * Version: 1.1.0
  * Author: David Kariuki
