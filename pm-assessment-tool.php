@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.3
+ * Version: 1.2.4
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -50,7 +50,8 @@ function pmat_enqueue_scripts() {
     
     // Localize the script with new data
     wp_localize_script('pmat-script', 'pmatAjax', array(
-        'ajaxurl' => admin_url('admin-ajax.php')
+        'ajaxurl' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('pmat_assessment_nonce')
     ));
 }
 add_action('wp_enqueue_scripts', 'pmat_enqueue_scripts');
@@ -103,8 +104,8 @@ function pmat_send_assessment_email($name, $email, $results) {
 // Update the assessment results handler with better error handling
 function pmat_handle_assessment_results() {
     try {
-        // Verify AJAX request
-        if (!wp_verify_nonce($_REQUEST['nonce'], 'pmat_admin_nonce')) {
+        // Update nonce verification
+        if (!check_ajax_referer('pmat_assessment_nonce', 'nonce', false)) {
             throw new Exception('Security check failed');
         }
 

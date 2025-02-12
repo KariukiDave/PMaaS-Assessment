@@ -12,6 +12,12 @@ David Kariuki
 
 ## Changelog
 
+### 1.2.4 - 2025
+- Fixed security nonce verification in assessment submissions
+- Updated AJAX nonce handling
+- Improved form submission security
+- Fixed email sending security checks
+
 ### 1.2.3 - 2025
 - Fixed assessment results email sending functionality
 - Added comprehensive error handling for email submissions
