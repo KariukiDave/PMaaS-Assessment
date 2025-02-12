@@ -200,11 +200,15 @@ jQuery(document).ready(function($) {
                 selections: userSelections
             },
             success: function(response) {
-                alert('Results have been sent to your email!');
+                if (response.success) {
+                    alert('Results have been sent to your email!');
+                } else {
+                    alert('Error: ' + (response.data.message || 'Failed to send email. Please try again.'));
+                }
                 $('#send-results').prop('disabled', false).text('Send Results');
             },
-            error: function() {
-                alert('There was an error sending your results. Please try again.');
+            error: function(xhr, status, error) {
+                alert('Error: ' + error);
                 $('#send-results').prop('disabled', false).text('Send Results');
             }
         });

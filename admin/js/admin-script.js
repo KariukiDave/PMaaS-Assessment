@@ -24,11 +24,11 @@ jQuery(document).ready(function($) {
                 if (response.success) {
                     resultSpan.addClass('success').text('Test email sent successfully!');
                 } else {
-                    resultSpan.addClass('error').text('Failed to send test email: ' + response.data.message);
+                    resultSpan.addClass('error').text('Error: ' + (response.data.message || 'Failed to send test email'));
                 }
             },
-            error: function() {
-                resultSpan.addClass('error').text('Failed to send test email');
+            error: function(xhr, status, error) {
+                resultSpan.addClass('error').text('Error: ' + error);
             },
             complete: function() {
                 $('#send_test_email').prop('disabled', false).text('Send Test Email');

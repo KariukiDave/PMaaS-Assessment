@@ -1,4 +1,4 @@
-# Project Management Assessment Tool
+# PM Assessment Tool
 
 A WordPress plugin that helps organizations assess their project management needs and provides tailored recommendations.
 
@@ -12,7 +12,16 @@ David Kariuki
 
 ## Changelog
 
-### 1.2.1 - 2025
+### 1.2.2 - 2024
+- Fixed email sending functionality
+- Added detailed SMTP error logging
+- Improved error handling and user feedback
+- Enhanced SMTP configuration
+- Added debug mode for email troubleshooting
+- Fixed test email functionality in settings
+- Improved error messages display
+
+### 1.2.1 - 2024
 - Optimized dashboard chart sizes for better visibility
 - Improved chart layout and responsiveness
 - Enhanced data visualization with better spacing

@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -109,52 +109,52 @@ function pmat_handle_assessment_results() {
     $recommendation = $_POST['recommendation'];
     $selections = $_POST['selections'];
 
-    // Format selections for email
-    $formatted_selections = array();
-    foreach ($selections as $selection) {
-        if (isset($selection['question']) && isset($selection['answer'])) {
-            $formatted_selections[wp_strip_all_tags($selection['question'])] = 
-                wp_strip_all_tags($selection['answer']);
+    // Configure SMTP
+    add_action('phpmailer_init', 'pmat_configure_smtp');
+
+    try {
+        // Format selections for email
+        $formatted_selections = array();
+        foreach ($selections as $selection) {
+            if (isset($selection['question']) && isset($selection['answer'])) {
+                $formatted_selections[wp_strip_all_tags($selection['question'])] = 
+                    wp_strip_all_tags($selection['answer']);
+            }
         }
+
+        // Prepare result data for email template
+        $result = array(
+            'text' => wp_strip_all_tags($recommendation['text']),
+            'icon' => $recommendation['icon']
+        );
+
+        // Generate email content
+        $email_content = pmat_generate_email_content($formatted_selections, $result);
+
+        // Email headers
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_option('pmat_from_name') . ' <' . get_option('pmat_from_email') . '>'
+        );
+
+        // Add Reply-To if set
+        $reply_to_email = get_option('pmat_reply_to_email');
+        if (!empty($reply_to_email)) {
+            $headers[] = 'Reply-To: ' . $reply_to_email;
+        }
+
+        // Send email
+        $sent = wp_mail($email, "Your Project Management Assessment Results", $email_content, $headers);
+
+        if ($sent) {
+            wp_send_json_success(array('message' => 'Email sent successfully'));
+        } else {
+            global $phpmailer;
+            wp_send_json_error(array('message' => 'Failed to send email: ' . $phpmailer->ErrorInfo));
+        }
+    } catch (Exception $e) {
+        wp_send_json_error(array('message' => 'Exception occurred: ' . $e->getMessage()));
     }
-
-    // Prepare result data for email template
-    $result = array(
-        'text' => wp_strip_all_tags($recommendation['text']),
-        'icon' => $recommendation['icon'] // SVG is allowed
-    );
-
-    // Generate email content
-    $email_content = pmat_generate_email_content($formatted_selections, $result);
-
-    // Get reply-to email
-    $reply_to_email = get_option('pmat_reply_to_email');
-    
-    // Email headers
-    $headers = array(
-        'Content-Type: text/html; charset=UTF-8',
-        'From: ' . get_option('pmat_from_name') . ' <' . get_option('pmat_from_email') . '>'
-    );
-    
-    // Add Reply-To header if set
-    if (!empty($reply_to_email)) {
-        $headers[] = 'Reply-To: ' . $reply_to_email;
-    }
-
-    // Email subject
-    $subject = "Your Project Management Assessment Results";
-
-    // Send email
-    $sent = wp_mail($email, $subject, $email_content, $headers);
-
-    // Send response
-    if ($sent) {
-        wp_send_json_success(array('message' => 'Email sent successfully'));
-    } else {
-        wp_send_json_error(array('message' => 'Failed to send email'));
-    }
-
-    wp_die();
 }
 
 // Admin Menu
@@ -328,22 +328,76 @@ function pmat_get_dashboard_data() {
     ));
 }
 
-// Also update the test email handler
+// Update the test email handler with better error handling
 function pmat_handle_test_email() {
-    // ... existing code ...
+    check_ajax_referer('pmat_admin_nonce', 'nonce');
     
-    $reply_to_email = get_option('pmat_reply_to_email');
+    $test_email = sanitize_email($_POST['email']);
+    
+    // Configure SMTP
+    add_action('phpmailer_init', 'pmat_configure_smtp');
+    
+    // Send test email
+    $subject = 'PM Assessment Tool - Test Email';
+    $message = 'This is a test email from your PM Assessment Tool plugin. If you receive this, your email settings are working correctly.';
     
     $headers = array(
         'Content-Type: text/html; charset=UTF-8',
         'From: ' . get_option('pmat_from_name') . ' <' . get_option('pmat_from_email') . '>'
     );
     
+    // Add Reply-To if set
+    $reply_to_email = get_option('pmat_reply_to_email');
     if (!empty($reply_to_email)) {
         $headers[] = 'Reply-To: ' . $reply_to_email;
     }
+
+    // Enable debug mode
+    global $phpmailer;
+    if (!isset($phpmailer)) {
+        require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+        require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+        require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+    }
+
+    try {
+        $sent = wp_mail($test_email, $subject, $message, $headers);
+        
+        if ($sent) {
+            wp_send_json_success(array('message' => 'Email sent successfully'));
+        } else {
+            global $phpmailer;
+            wp_send_json_error(array('message' => 'Failed to send email: ' . $phpmailer->ErrorInfo));
+        }
+    } catch (Exception $e) {
+        wp_send_json_error(array('message' => 'Exception occurred: ' . $e->getMessage()));
+    }
+}
+
+// Add SMTP configuration function
+function pmat_configure_smtp($phpmailer) {
+    $smtp_host = get_option('pmat_smtp_host');
+    $smtp_port = get_option('pmat_smtp_port');
+    $smtp_username = get_option('pmat_smtp_username');
+    $smtp_password = base64_decode(get_option('pmat_smtp_password'));
     
-    // ... rest of the function ...
+    if (empty($smtp_host) || empty($smtp_username) || empty($smtp_password)) {
+        return;
+    }
+
+    $phpmailer->isSMTP();
+    $phpmailer->Host = $smtp_host;
+    $phpmailer->SMTPAuth = true;
+    $phpmailer->Port = $smtp_port;
+    $phpmailer->Username = $smtp_username;
+    $phpmailer->Password = $smtp_password;
+    $phpmailer->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+    $phpmailer->From = get_option('pmat_from_email');
+    $phpmailer->FromName = get_option('pmat_from_name');
+    
+    // Enable debug mode for SMTP
+    $phpmailer->SMTPDebug = 2;
+    $phpmailer->Debugoutput = 'error_log';
 }
 
 // Initialize the updater
