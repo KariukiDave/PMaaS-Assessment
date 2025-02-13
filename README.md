@@ -12,16 +12,6 @@ David Kariuki
 
 ## Changelog
 
-### 1.2.9 - 2025
-- Fixed submissions display functionality
-- Improved assessment data storage
-- Added basic submissions table view
-- Enhanced submission record keeping
-- Added proper date ordering
-- Improved email status display
-- Added basic error logging
-- Fixed admin menu integration
-
 ### 1.2.8 - 2025
 - Fixed dashboard data to show all assessments
 - Updated submissions tracking to include non-emailed assessments

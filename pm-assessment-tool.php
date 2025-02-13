@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.9
+ * Version: 1.2.8
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -104,16 +104,66 @@ function pmat_send_assessment_email($name, $email, $results) {
 // Update the assessment results handler with improved debugging
 function pmat_handle_assessment_results() {
     try {
+        // Verify AJAX request
         check_ajax_referer('pmat_assessment_nonce', 'nonce');
 
-        // Get and sanitize data
+        // Log incoming data for debugging
+        error_log('PM Assessment - Incoming Data: ' . print_r($_POST, true));
+
+        // Get and sanitize the submitted data
         $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
         $email = isset($_POST['email']) ? sanitize_email($_POST['email']) : '';
         $score = isset($_POST['score']) ? intval($_POST['score']) : 0;
-        $recommendation = isset($_POST['recommendation']) ? $_POST['recommendation'] : array();
+        
+        // Validate required fields
+        if (empty($name) || empty($email)) {
+            throw new Exception('Name and email are required');
+        }
+
+        if (!is_email($email)) {
+            throw new Exception('Invalid email address');
+        }
+
+        // Ensure recommendation data exists
+        if (!isset($_POST['recommendation']) || empty($_POST['recommendation'])) {
+            throw new Exception('Recommendation data is missing');
+        }
+
+        $recommendation = $_POST['recommendation'];
         $selections = isset($_POST['selections']) ? $_POST['selections'] : array();
 
-        // Save to database first
+        // Generate email content first to catch any potential issues
+        $email_content = pmat_generate_email_content($name, $score, $recommendation, $selections);
+
+        // Configure email settings
+        $subject = "Your Project Management Assessment Results";
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            'From: ' . get_option('pmat_from_name', 'PM Assessment Tool') . ' <' . get_option('pmat_from_email', '') . '>'
+        );
+
+        // Add Reply-To if set
+        $reply_to_email = get_option('pmat_reply_to_email');
+        if (!empty($reply_to_email)) {
+            $headers[] = 'Reply-To: ' . $reply_to_email;
+        }
+
+        // Configure SMTP before sending
+        add_action('phpmailer_init', 'pmat_configure_smtp');
+
+        // Send email
+        $sent = wp_mail($email, $subject, $email_content, $headers);
+
+        if (!$sent) {
+            global $phpmailer;
+            $error_msg = isset($phpmailer) && isset($phpmailer->ErrorInfo) 
+                ? $phpmailer->ErrorInfo 
+                : 'Unknown error occurred while sending email';
+            error_log('PM Assessment - Email Error: ' . $error_msg);
+            throw new Exception($error_msg);
+        }
+
+        // Save to database only if email was sent successfully
         global $wpdb;
         $table_name = $wpdb->prefix . 'pm_assessments';
         
@@ -123,9 +173,9 @@ function pmat_handle_assessment_results() {
                 'name' => $name,
                 'email' => $email,
                 'score' => $score,
-                'recommendation' => json_encode($recommendation),
+                'recommendation' => is_array($recommendation) ? json_encode($recommendation) : $recommendation,
                 'selections' => json_encode($selections),
-                'email_sent' => 0, // Default to not sent
+                'email_sent' => 1,
                 'date_created' => current_time('mysql')
             ),
             array('%s', '%s', '%d', '%s', '%s', '%d', '%s')
@@ -133,49 +183,19 @@ function pmat_handle_assessment_results() {
 
         if ($insert_result === false) {
             error_log('PM Assessment - Database Error: ' . $wpdb->last_error);
-            throw new Exception('Failed to save assessment data');
+            // Don't throw exception here as email was sent successfully
         }
 
-        // Only attempt to send email if email is provided
-        if (!empty($email) && is_email($email)) {
-            // Generate email content
-            $email_content = pmat_generate_email_content($name, $score, $recommendation, $selections);
-
-            // Configure email settings
-            $subject = "Your Project Management Assessment Results";
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . get_option('pmat_from_name', 'PM Assessment Tool') . ' <' . get_option('pmat_from_email', '') . '>'
-            );
-
-            // Add Reply-To if set
-            $reply_to_email = get_option('pmat_reply_to_email');
-            if (!empty($reply_to_email)) {
-                $headers[] = 'Reply-To: ' . $reply_to_email;
-            }
-
-            // Configure SMTP before sending
-            add_action('phpmailer_init', 'pmat_configure_smtp');
-
-            // Send email
-            $sent = wp_mail($email, $subject, $email_content, $headers);
-
-            if ($sent) {
-                $wpdb->update(
-                    $table_name,
-                    array('email_sent' => 1),
-                    array('id' => $wpdb->insert_id),
-                    array('%d'),
-                    array('%d')
-                );
-            }
-        }
-
-        wp_send_json_success(array('message' => 'Assessment saved successfully'));
+        wp_send_json_success(array(
+            'message' => 'Results sent successfully'
+        ));
 
     } catch (Exception $e) {
         error_log('PM Assessment - Error: ' . $e->getMessage());
-        wp_send_json_error(array('message' => $e->getMessage()));
+        error_log('PM Assessment - Stack Trace: ' . $e->getTraceAsString());
+        wp_send_json_error(array(
+            'message' => $e->getMessage()
+        ));
     }
 }
 
@@ -272,22 +292,25 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
 add_action('admin_menu', 'pmat_add_admin_menu');
 
 function pmat_add_admin_menu() {
+    // Main menu item
     add_menu_page(
-        'PM Assessment Dashboard',
-        'PM Assessment',
-        'manage_options',
-        'pm-assessment-dashboard',
-        'pmat_render_dashboard_page',
-        'dashicons-chart-bar'
+        'PM Assessment Tool', // Page title
+        'PM Assessment', // Menu title
+        'manage_options', // Capability
+        'pm-assessment', // Menu slug
+        'pmat_dashboard_page', // Function to display the page
+        'dashicons-chart-bar', // Icon
+        30 // Position
     );
 
+    // Submissions submenu
     add_submenu_page(
-        'pm-assessment-dashboard',
-        'Assessment Submissions',
-        'Submissions',
-        'manage_options',
-        'pm-assessment-submissions',
-        'pmat_render_submissions_page'
+        'pm-assessment', // Parent slug
+        'Assessment Submissions', // Page title
+        'Submissions', // Menu title
+        'manage_options', // Capability
+        'pm-assessment-submissions', // Menu slug
+        'pmat_submissions_page' // Function to display the page
     );
 
     // Settings submenu
@@ -550,9 +573,3 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-plugin-updater.php';
 if (is_admin()) {
     new PMAT_Plugin_Updater(__FILE__);
 }
-
-// Make sure submissions.php is included
-function pmat_admin_init() {
-    require_once plugin_dir_path(__FILE__) . 'admin/submissions.php';
-}
-add_action('admin_init', 'pmat_admin_init');
