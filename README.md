@@ -12,6 +12,16 @@ David Kariuki
 
 ## Changelog
 
+### 1.2.7 - 2025
+- Enhanced email template design
+- Added white background for logo (dark mode compatible)
+- Added prominent recommendation title section
+- Fixed apostrophe encoding in questions
+- Updated contact information
+- Improved contact section layout
+- Enhanced visual hierarchy of recommendations
+- Improved email content formatting
+
 ### 1.2.6 - 2025
 - Enhanced email template design
 - Added Creative Bits logo to email header

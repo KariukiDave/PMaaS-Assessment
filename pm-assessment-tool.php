@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.6
+ * Version: 1.2.7
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -201,7 +201,6 @@ function pmat_handle_assessment_results() {
 
 // Update the email content generation function with improved layout
 function pmat_generate_email_content($name, $score, $recommendation, $selections) {
-    // Get plugin directory URL for the logo
     $plugin_url = plugin_dir_url(__FILE__);
     
     $content = '<!DOCTYPE html>
@@ -213,9 +212,11 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
                 </head>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">';
 
-    // Add header with logo
+    // Add header with logo on white background
     $content .= '<div style="background-color: #080244; padding: 20px; text-align: center;">
-                    <img src="' . $plugin_url . 'assets/images/creative-bits-logo.png" alt="Creative Bits Logo" style="max-width: 200px; height: auto;">
+                    <div style="background-color: white; padding: 15px; display: inline-block; border-radius: 8px;">
+                        <img src="' . $plugin_url . 'assets/images/creative-bits-logo.png" alt="Creative Bits Logo" style="max-width: 200px; height: auto;">
+                    </div>
                     <h1 style="color: #ffffff; margin-top: 15px;">Your Project Management Assessment Results</h1>
                  </div>';
 
@@ -229,9 +230,17 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
                     <h2 style="margin: 0;">Your Score: ' . esc_html($score) . '%</h2>
                  </div>';
 
-    // Add recommendation section
+    // Add recommendation title in big font
+    $content .= '<div style="margin: 20px 0; text-align: center;">
+                    <h2 style="font-size: 32px; color: #080244; margin-bottom: 10px;">Recommended Approach:</h2>
+                    <h3 style="font-size: 28px; color: #fd611c; margin-top: 0;">' . 
+                    (isset($recommendation['title']) ? esc_html($recommendation['title']) : '') . 
+                    '</h3>
+                 </div>';
+
+    // Add recommendation explanation
     $content .= '<div style="margin: 20px 0;">
-                    <h2>Recommendation</h2>
+                    <h2>Detailed Recommendation</h2>
                     <p>' . (isset($recommendation['text']) ? esc_html($recommendation['text']) : '') . '</p>
                  </div>';
 
@@ -250,9 +259,13 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
         
         foreach ($selections as $selection) {
             if (isset($selection['question']) && isset($selection['answer'])) {
+                // Fix apostrophe encoding in questions
+                $question = str_replace("\'", "'", $selection['question']);
+                $answer = str_replace("\'", "'", $selection['answer']);
+                
                 $content .= '<tr>
-                                <td style="padding: 12px; border: 1px solid #ddd;">' . esc_html($selection['question']) . '</td>
-                                <td style="padding: 12px; border: 1px solid #ddd;">' . esc_html($selection['answer']) . '</td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">' . esc_html($question) . '</td>
+                                <td style="padding: 12px; border: 1px solid #ddd;">' . esc_html($answer) . '</td>
                             </tr>';
             }
         }
@@ -260,10 +273,14 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
         $content .= '</tbody></table></div>';
     }
 
-    // Add contact section
+    // Add contact section with updated details
     $content .= '<div style="margin-top: 30px; padding: 20px; background-color: #f9f9f9; border-radius: 5px;">
                     <p style="margin-bottom: 0;">Need help managing and automating your projects? Our team of experts is ready to assist you.</p>
-                    <p style="margin-top: 10px;">Get in touch with us at <a href="mailto:info@creativebits.us" style="color: #fd611c; text-decoration: none;">info@creativebits.us</a> or visit our website <a href="https://creativebits.us" style="color: #fd611c; text-decoration: none;">creativebits.us</a></p>
+                    <p style="margin-top: 10px;">Get in touch with us:</p>
+                    <ul style="list-style: none; padding: 0; margin: 10px 0;">
+                        <li style="margin-bottom: 5px;">Email: <a href="mailto:mail@creativebits.us" style="color: #fd611c; text-decoration: none;">mail@creativebits.us</a></li>
+                        <li>Visit: <a href="https://creativebits.us/contact-us/" style="color: #fd611c; text-decoration: none;">https://creativebits.us/contact-us/</a></li>
+                    </ul>
                  </div>';
 
     // Add footer
