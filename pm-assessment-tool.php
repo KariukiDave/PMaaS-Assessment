@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.7
+ * Version: 1.2.8
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -201,8 +201,6 @@ function pmat_handle_assessment_results() {
 
 // Update the email content generation function with improved layout
 function pmat_generate_email_content($name, $score, $recommendation, $selections) {
-    $plugin_url = plugin_dir_url(__FILE__);
-    
     $content = '<!DOCTYPE html>
                 <html>
                 <head>
@@ -212,12 +210,9 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
                 </head>
                 <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">';
 
-    // Add header with logo on white background
+    // Simple header without logo
     $content .= '<div style="background-color: #080244; padding: 20px; text-align: center;">
-                    <div style="background-color: white; padding: 15px; display: inline-block; border-radius: 8px;">
-                        <img src="' . $plugin_url . 'assets/images/creative-bits-logo.png" alt="Creative Bits Logo" style="max-width: 200px; height: auto;">
-                    </div>
-                    <h1 style="color: #ffffff; margin-top: 15px;">Your Project Management Assessment Results</h1>
+                    <h1 style="color: #ffffff; margin: 0;">Your Project Management Assessment Results</h1>
                  </div>';
 
     // Add personal greeting
@@ -397,7 +392,7 @@ function pmat_get_dashboard_data() {
     // Get data for the last 30 days
     $thirty_days_ago = date('Y-m-d', strtotime('-30 days'));
     
-    // Get daily assessments (all assessments, not just emailed ones)
+    // Get all assessments, not just emailed ones
     $daily_assessments = $wpdb->get_results($wpdb->prepare(
         "SELECT DATE(date_created) as date, COUNT(*) as count 
          FROM $table_name 
@@ -407,7 +402,7 @@ function pmat_get_dashboard_data() {
         $thirty_days_ago
     ));
 
-    // Get recommendation distribution (all assessments)
+    // Get recommendation distribution for all assessments
     $recommendations = $wpdb->get_results(
         "SELECT 
             CASE 
@@ -425,7 +420,7 @@ function pmat_get_dashboard_data() {
             END"
     );
 
-    // Get daily emails (only where email_sent = 1)
+    // Get daily emails (where email_sent = 1)
     $daily_emails = $wpdb->get_results($wpdb->prepare(
         "SELECT DATE(date_created) as date, COUNT(*) as count 
          FROM $table_name 

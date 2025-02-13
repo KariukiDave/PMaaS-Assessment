@@ -12,6 +12,16 @@ David Kariuki
 
 ## Changelog
 
+### 1.2.8 - 2025
+- Fixed dashboard data to show all assessments
+- Updated submissions tracking to include non-emailed assessments
+- Improved assessment data storage
+- Removed logo from email template
+- Enhanced dashboard analytics
+- Separated email sending from assessment recording
+- Improved data retrieval queries
+- Added proper status tracking for emails
+
 ### 1.2.7 - 2025
 - Enhanced email template design
 - Added white background for logo (dark mode compatible)
