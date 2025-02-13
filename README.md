@@ -12,17 +12,6 @@ David Kariuki
 
 ## Changelog
 
-### 1.2.9 - 2025
-- Enhanced submissions management interface
-- Added date range filtering for submissions
-- Added recommendation type filtering
-- Added email status filtering
-- Added sortable columns for better organization
-- Implemented CSV export functionality
-- Improved submissions table layout
-- Added comprehensive data filtering options
-- Enhanced visual feedback for sorting and filtering
-
 ### 1.2.8 - 2025
 - Fixed dashboard data to show all assessments
 - Updated submissions tracking to include non-emailed assessments
