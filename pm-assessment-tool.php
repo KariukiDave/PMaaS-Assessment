@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.3.0
+ * Version: 1.2.9
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -292,31 +292,35 @@ function pmat_generate_email_content($name, $score, $recommendation, $selections
 add_action('admin_menu', 'pmat_add_admin_menu');
 
 function pmat_add_admin_menu() {
+    // Main menu item
     add_menu_page(
-        'PM Assessment Dashboard',
-        'PM Assessment',
-        'manage_options',
-        'pm-assessment-dashboard',
-        'pmat_render_dashboard_page',
-        'dashicons-chart-bar'
+        'PM Assessment Tool', // Page title
+        'PM Assessment', // Menu title
+        'manage_options', // Capability
+        'pm-assessment', // Menu slug
+        'pmat_dashboard_page', // Function to display the page
+        'dashicons-chart-bar', // Icon
+        30 // Position
     );
 
+    // Submissions submenu
     add_submenu_page(
-        'pm-assessment-dashboard',
-        'Assessment Submissions',
-        'Submissions',
-        'manage_options',
-        'pm-assessment-submissions',
-        'pmat_render_submissions_page'
+        'pm-assessment', // Parent slug
+        'Assessment Submissions', // Page title
+        'Submissions', // Menu title
+        'manage_options', // Capability
+        'pm-assessment-submissions', // Menu slug
+        'pmat_submissions_page' // Function to display the page
     );
 
+    // Settings submenu
     add_submenu_page(
-        'pm-assessment-dashboard',
-        'PM Assessment Settings',
-        'Settings',
-        'manage_options',
-        'pm-assessment-settings',
-        'pmat_render_settings_page'
+        'pm-assessment', // Parent slug
+        'Assessment Settings', // Page title
+        'Settings', // Menu title
+        'manage_options', // Capability
+        'pm-assessment-settings', // Menu slug
+        'pmat_settings_page' // Function to display the page
     );
 }
 
@@ -352,13 +356,23 @@ function pmat_settings_page() {
 add_action('admin_enqueue_scripts', 'pmat_admin_enqueue_scripts');
 
 function pmat_admin_enqueue_scripts($hook) {
-    if (strpos($hook, 'pm-assessment') !== false) {
-        wp_enqueue_style('pmat-admin-style', plugin_dir_url(__FILE__) . 'admin/css/admin-style.css');
-        wp_enqueue_script('pmat-admin-script', plugin_dir_url(__FILE__) . 'admin/js/admin-script.js', array('jquery'), '', true);
-        wp_localize_script('pmat-admin-script', 'pmatAdmin', array(
-            'nonce' => wp_create_nonce('pmat_admin_nonce')
-        ));
+    // Only load on our plugin pages
+    if (strpos($hook, 'pm-assessment') === false) {
+        return;
     }
+
+    // Enqueue Chart.js
+    wp_enqueue_script('chartjs', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', true);
+    
+    // Enqueue our admin scripts and styles
+    wp_enqueue_style('pmat-admin-styles', plugins_url('admin/css/admin-style.css', __FILE__));
+    wp_enqueue_script('pmat-admin-script', plugins_url('admin/js/admin-script.js', __FILE__), array('jquery', 'chartjs'), '1.0', true);
+    
+    // Localize script for AJAX
+    wp_localize_script('pmat-admin-script', 'pmatAdmin', array(
+        'ajaxurl' => admin_url('admin-ajax.php'),
+        'nonce' => wp_create_nonce('pmat_admin_nonce')
+    ));
 }
 
 // Deactivation hook
