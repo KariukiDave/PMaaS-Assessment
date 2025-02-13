@@ -213,3 +213,39 @@
         padding: 10px 0;
     }
 }
+
+/* Submissions page styles */
+.tablenav.top {
+    margin: 20px 0;
+    padding: 15px;
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+.tablenav input[type="date"],
+.tablenav select {
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+.wp-list-table th.sorted.asc .sorting-indicator:before {
+    content: "\f142";
+}
+
+.wp-list-table th.sorted.desc .sorting-indicator:before {
+    content: "\f140";
+}
+
+.wp-list-table th a {
+    display: inline-block;
+    padding-right: 25px;
+    position: relative;
+}
+
+.wp-list-table th .sorting-indicator {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+}
