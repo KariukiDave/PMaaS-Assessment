@@ -12,6 +12,16 @@ David Kariuki
 
 ## Changelog
 
+### 1.3.0 - 2025
+- Fixed submissions page blank screen issue
+- Added proper file includes and dependencies
+- Enhanced modal functionality for submission details
+- Improved admin styles and layout
+- Added proper error handling and debugging
+- Fixed admin menu structure
+- Enhanced submissions modal styling
+- Added proper script loading
+
 ### 1.2.9 - 2025
 - Enhanced submissions management interface
 - Added date range filtering for submissions
