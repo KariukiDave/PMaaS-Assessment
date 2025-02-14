@@ -12,6 +12,16 @@ David Kariuki
 
 ## Changelog
 
+### 1.2.9 - 2025
+- Fixed submissions data storage and display
+- Updated database table name to pmat_submissions
+- Fixed submissions page data retrieval
+- Maintained email functionality while improving data storage
+- Enhanced submission tracking system
+- Improved error logging for submissions
+- Fixed assessment data recording
+- Ensured all submissions are properly stored
+
 ### 1.2.8 - 2025
 - Fixed dashboard data to show all assessments
 - Updated submissions tracking to include non-emailed assessments
