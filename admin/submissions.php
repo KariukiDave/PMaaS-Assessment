@@ -8,18 +8,6 @@ if (!defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'class-submissions-list-table.php';
 $submissions_table = new PMAT_Submissions_List_Table();
 $submissions_table->prepare_items();
-
-function pmat_render_submissions_page() {
-    global $wpdb;
-    $table_name = $wpdb->prefix . 'pmat_submissions'; // Updated table name
-
-    // Get all submissions, ordered by date
-    $submissions = $wpdb->get_results(
-        "SELECT * FROM $table_name ORDER BY date_created DESC"
-    );
-    
-    // Rest of the function remains the same...
-}
 ?>
 
 <div class="wrap pmat-submissions">

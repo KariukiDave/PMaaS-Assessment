@@ -209,8 +209,11 @@ jQuery(document).ready(function($) {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Assessment submission error:', error);
-                alert('Error saving results. Please try again.');
+                console.error('AJAX Error:', status, error);
+                alert('Error sending results. Please try again or contact support.');
+            },
+            complete: function() {
+                button.prop('disabled', false).text('Send Results');
             }
         });
     });
