@@ -12,6 +12,23 @@ David Kariuki
 
 ## Changelog
 
+### 2.0 - 2025
+- Added submissions export & bulk export function
+- Added submissions delete function
+- Added new page to view individual submission details
+- Updated Scoring matrix
+- Added email sent status to DB
+- Enhanced dashboards to show correct submissions Statistics
+- Enhanced dashboard charts appearance
+- Added shorter labels for the dashboard charts
+- Simplified assessment response options
+- Fixed assessment data storage
+- Fixed filtering on submissions page
+- Updated submissions page to show full details including score & recommendation
+- Improved data retrieval queries
+
+
+
 ### 1.2.8 - 2025
 - Fixed dashboard data to show all assessments
 - Updated submissions tracking to include non-emailed assessments

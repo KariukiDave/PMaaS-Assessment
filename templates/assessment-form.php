@@ -12,9 +12,9 @@
             <div class="question" data-weight="10">
                 <h3>1. How complex are your typical projects?</h3>
                 <div class="options">
-                    <button type="button" data-value="1">High complexity with multiple stakeholders and dependencies</button>
-                    <button type="button" data-value="2">Medium complexity with moderate stakeholder involvement</button>
-                    <button type="button" data-value="3">Low complexity with straightforward requirements</button>
+                    <button type="button" data-value="1">High complexity, many stakeholders</button>
+                    <button type="button" data-value="2">Medium complexity, few stakeholders</button>
+                    <button type="button" data-value="3">Low complexity, straightforward</button>
                 </div>
             </div>
 
@@ -22,51 +22,51 @@
             <div class="question" data-weight="10">
                 <h3>2. How many projects do you manage annually?</h3>
                 <div class="options">
-                    <button type="button" data-value="1">More than 20 projects</button>
-                    <button type="button" data-value="2">10-20 projects</button>
-                    <button type="button" data-value="3">Less than 10 projects</button>
+                    <button type="button" data-value="1">More than 20</button>
+                    <button type="button" data-value="2">10-20</button>
+                    <button type="button" data-value="3">Less than 10</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
 
             <!-- Project Management Maturity -->
             <div class="question" data-weight="15">
-                <h3>3. What is your organization's project management maturity level?</h3>
+                <h3>3. How mature are your project management processes?</h3>
                 <div class="options">
-                    <button type="button" data-value="3">Well-established PM practices and processes</button>
-                    <button type="button" data-value="2">Basic PM processes in place</button>
-                    <button type="button" data-value="1">Limited or no formal PM processes</button>
+                    <button type="button" data-value="3">Well-established processes</button>
+                    <button type="button" data-value="2">Basic PM processes</button>
+                    <button type="button" data-value="1">No formal processes</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
 
             <!-- Resource Availability -->
             <div class="question" data-weight="15">
-                <h3>4. What is your current resource availability for project management?</h3>
+                <h3>How available are your project management resources?</h3>
                 <div class="options">
-                    <button type="button" data-value="3">Dedicated PM team in place</button>
-                    <button type="button" data-value="2">Limited PM resources available</button>
-                    <button type="button" data-value="1">No internal PM resources</button>
+                    <button type="button" data-value="3">Dedicated PM team</button>
+                    <button type="button" data-value="2">Limited PM resources</button>
+                    <button type="button" data-value="1">No internal resources</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
 
             <!-- Budget Considerations -->
             <div class="question" data-weight="10">
-                <h3>5. What is your budget flexibility for project management?</h3>
+                <h3>5. How flexible is your project management budget?</h3>
                 <div class="options">
-                    <button type="button" data-value="3">Flexible budget with room for investment</button>
-                    <button type="button" data-value="2">Moderate budget constraints</button>
-                    <button type="button" data-value="1">Strict budget limitations</button>
+                    <button type="button" data-value="3">Flexible</button>
+                    <button type="button" data-value="2">Moderate constraints</button>
+                    <button type="button" data-value="1">Strict limitations</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
 
             <!-- Strategic Importance -->
             <div class="question" data-weight="10">
-                <h3>6. How critical are projects to your organization's strategic goals?</h3>
+                <h3>6. How important are projects to your organization's success?</h3>
                 <div class="options">
-                    <button type="button" data-value="3">Highly critical to business success</button>
+                    <button type="button" data-value="3">Critical to success</button>
                     <button type="button" data-value="2">Moderately important</button>
                     <button type="button" data-value="1">Supporting role only</button>
                 </div>
@@ -77,31 +77,31 @@
             <div class="question" data-weight="10">
                 <h3>7. How important is maintaining direct control over project management?</h3>
                 <div class="options">
-                    <button type="button" data-value="3">High need for internal control</button>
-                    <button type="button" data-value="2">Moderate control requirements</button>
-                    <button type="button" data-value="1">Comfortable with external management</button>
+                    <button type="button" data-value="3">High need for control</button>
+                    <button type="button" data-value="2">Moderate control</button>
+                    <button type="button" data-value="1">Open to external management</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
 
             <!-- Scalability Needs -->
             <div class="question" data-weight="10">
-                <h3>8. What are your scalability requirements for project management?</h3>
+                <h3>8. What are your scalability needs?</h3>
                 <div class="options">
-                    <button type="button" data-value="1">Need high scalability and flexibility</button>
-                    <button type="button" data-value="2">Moderate scalability needs</button>
-                    <button type="button" data-value="3">Stable, predictable requirements</button>
+                    <button type="button" data-value="1">High scalability needed</button>
+                    <button type="button" data-value="2">Moderate needs</button>
+                    <button type="button" data-value="3">Stable, predictable</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
 
             <!-- Industry Expertise -->
             <div class="question" data-weight="10">
-                <h3>9. How important is industry-specific project management expertise?</h3>
+                <h3>9. How important is industry-specific expertise?</h3>
                 <div class="options">
-                    <button type="button" data-value="3">Highly specialized industry knowledge required</button>
-                    <button type="button" data-value="2">Moderate industry expertise needed</button>
-                    <button type="button" data-value="1">General PM expertise is sufficient</button>
+                    <button type="button" data-value="3">Highly specialized expertise</button>
+                    <button type="button" data-value="2">Some expertise needed</button>
+                    <button type="button" data-value="1">General PM knowledge is enough</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
@@ -110,9 +110,9 @@
             <div class="question" data-weight="10">
                 <h3>10. Do you have in-house expertise in modern project management tools and automation?</h3>
                 <div class="options">
-                    <button type="button" data-value="3">Strong expertise with modern PM tools and automation</button>
-                    <button type="button" data-value="2">Basic knowledge of PM tools</button>
-                    <button type="button" data-value="1">Limited or no expertise with PM tools</button>
+                    <button type="button" data-value="3">Strong expertise</button>
+                    <button type="button" data-value="2">Basic knowledge</button>
+                    <button type="button" data-value="1">Limited or no expertise</button>
                 </div>
                 <button type="button" class="back-button" style="display: none;">Back</button>
             </div>
@@ -253,7 +253,6 @@ function generateEmailContent($selections, $result) {
     <body>
         <div class="email-container">
             <div class="header">
-                <img src="https://creativebits.us/wp-content/uploads/2024/01/Combined-logo.png" alt="Creative Bits Logo" class="logo">
                 <div class="thank-you">Thank you for completing the assessment!</div>
             </div>
             

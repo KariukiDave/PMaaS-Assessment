@@ -44,9 +44,9 @@ jQuery(document).ready(function($) {
             
             currentQuestion--;
             
-            $currentQuestion.fadeOut(300, function() {
+            $currentQuestion.fadeOut(500, function() {
                 const $prevQuestion = $currentQuestion.prev('.question');
-                $prevQuestion.fadeIn(300);
+                $prevQuestion.fadeIn(500);
                 
                 // Show previous selection in secondary color
                 if (previousSelections[currentQuestion] !== undefined) {
@@ -81,8 +81,8 @@ jQuery(document).ready(function($) {
         };
         
         if (currentQuestion < totalQuestions - 1) {
-            $question.fadeOut(300, function() {
-                $(this).next('.question').fadeIn(300);
+            $question.fadeOut(500, function() {
+                $(this).next('.question').fadeIn(500);
                 currentQuestion++;
                 updateProgress();
                 updateBackButton();
@@ -118,12 +118,12 @@ jQuery(document).ready(function($) {
         $('.pmaas-result, .hybrid-result, .internal-result').hide();
 
         // Show appropriate recommendation
-        if (percentageScore < 40) {
-            $('.pmaas-result').fadeIn(300);
-        } else if (percentageScore <= 70) {
-            $('.hybrid-result').fadeIn(300);
+        if (percentageScore < 55) {
+            $('.pmaas-result').fadeIn(500);
+        } else if (percentageScore <= 75) {
+            $('.hybrid-result').fadeIn(500);
         } else {
-            $('.internal-result').fadeIn(300);
+            $('.internal-result').fadeIn(500);
         }
 
         // Populate the selections table
@@ -142,7 +142,7 @@ jQuery(document).ready(function($) {
         });
 
         // Show results container with fade effect
-        $('.results-container').fadeIn(300);
+        $('.results-container').fadeIn(500);
 
         // Scroll to results
         $('html, body').animate({
@@ -156,10 +156,10 @@ jQuery(document).ready(function($) {
         const $button = $(this);
         
         if ($summary.is(':visible')) {
-            $summary.slideUp(300);
+            $summary.slideUp(500);
             $button.text('View Your Selections');
         } else {
-            $summary.slideDown(300);
+            $summary.slideDown(500);
             $button.text('Hide Your Selections');
         }
     });

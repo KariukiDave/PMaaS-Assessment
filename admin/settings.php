@@ -4,32 +4,51 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Save settings
+// Add body class for settings
+add_filter('admin_body_class', function($classes) {
+    return $classes . ' pmat-settings-page';
+});
+
+// Save settings with proper validation
 if (isset($_POST['pmat_save_settings']) && check_admin_referer('pmat_settings_nonce')) {
-    update_option('pmat_smtp_host', sanitize_text_field($_POST['pmat_smtp_host']));
-    update_option('pmat_smtp_port', sanitize_text_field($_POST['pmat_smtp_port']));
-    update_option('pmat_smtp_username', sanitize_text_field($_POST['pmat_smtp_username']));
+    // Validate and sanitize all inputs before saving
+    $smtp_host = isset($_POST['pmat_smtp_host']) ? sanitize_text_field($_POST['pmat_smtp_host']) : '';
+    $smtp_port = isset($_POST['pmat_smtp_port']) ? sanitize_text_field($_POST['pmat_smtp_port']) : '587';
+    $smtp_username = isset($_POST['pmat_smtp_username']) ? sanitize_text_field($_POST['pmat_smtp_username']) : '';
+    $from_email = isset($_POST['pmat_from_email']) ? sanitize_email($_POST['pmat_from_email']) : '';
+    $from_name = isset($_POST['pmat_from_name']) ? sanitize_text_field($_POST['pmat_from_name']) : 'Creative Bits';
+    
+    // Update options
+    update_option('pmat_smtp_host', $smtp_host);
+    update_option('pmat_smtp_port', $smtp_port);
+    update_option('pmat_smtp_username', $smtp_username);
+    
     // Only update password if it's changed (not empty)
     if (!empty($_POST['pmat_smtp_password'])) {
-        update_option('pmat_smtp_password', base64_encode($_POST['pmat_smtp_password']));
+        update_option('pmat_smtp_password', base64_encode(sanitize_text_field($_POST['pmat_smtp_password'])));
     }
-    update_option('pmat_from_email', sanitize_email($_POST['pmat_from_email']));
-    update_option('pmat_from_name', sanitize_text_field($_POST['pmat_from_name']));
     
-    echo '<div class="notice notice-success is-dismissible"><p>Settings saved successfully!</p></div>';
+    update_option('pmat_from_email', $from_email);
+    update_option('pmat_from_name', $from_name);
+    
+    // Add success message
+    add_settings_error('pmat_messages', 'pmat_message', __('Settings saved successfully!', 'pm-assessment-tool'), 'updated');
 }
 
-// Get current settings
+// Get current settings with defaults
 $smtp_host = get_option('pmat_smtp_host', '');
 $smtp_port = get_option('pmat_smtp_port', '587');
 $smtp_username = get_option('pmat_smtp_username', '');
-$smtp_password = get_option('pmat_smtp_password', ''); // Will be base64 encoded
+$smtp_password = get_option('pmat_smtp_password', '');
 $from_email = get_option('pmat_from_email', '');
 $from_name = get_option('pmat_from_name', 'Creative Bits');
+$reply_to_email = get_option('pmat_reply_to_email', '');
 ?>
 
-<div class="wrap pmat-settings">
-    <h1>PM Assessment Settings</h1>
+<div class="wrap pmat-settings-wrap">
+    <h1><?php echo esc_html__('PM Assessment Settings', 'pm-assessment-tool'); ?></h1>
+    
+    <?php settings_errors('pmat_messages'); ?>
 
     <form method="post" action="">
         <?php wp_nonce_field('pmat_settings_nonce'); ?>
@@ -74,7 +93,7 @@ $from_name = get_option('pmat_from_name', 'Creative Bits');
                         <input type="email" 
                                name="pmat_reply_to_email" 
                                id="pmat_reply_to_email" 
-                               value="<?php echo esc_attr(get_option('pmat_reply_to_email', '')); ?>" 
+                               value="<?php echo esc_attr($reply_to_email); ?>" 
                                class="regular-text">
                         <p class="description">Optional email address for replies. If left empty, replies will go to the From Email address.</p>
                     </td>
@@ -166,3 +185,13 @@ $from_name = get_option('pmat_from_name', 'Creative Bits');
         </p>
     </form>
 </div>
+
+<style>
+body.wp-admin.pmat-settings-page #wpcontent .wrap.pmat-settings-wrap {
+    margin-top: 0;
+}
+
+.pmat-settings-wrap .pmat-settings-section {
+    /* Existing styles remain the same */
+}
+</style>

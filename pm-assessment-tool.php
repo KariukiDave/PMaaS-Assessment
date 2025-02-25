@@ -2,7 +2,7 @@
 /**
  * Plugin Name: PM Assessment Tool
  * Description: A tool to assess project management needs and provide recommendations
- * Version: 1.2.8
+ * Version: 2.0
  * Author: David Kariuki
  * Author URI: https://creativebits.us
  * Plugin URI: https://github.com/KariukiDave/PMaaS-Assessment
@@ -19,6 +19,7 @@ add_action('wp_ajax_save_assessment_results', 'pmat_handle_assessment_results');
 add_action('wp_ajax_nopriv_save_assessment_results', 'pmat_handle_assessment_results');
 add_action('wp_ajax_pmat_get_dashboard_data', 'pmat_get_dashboard_data');
 add_action('wp_ajax_pmat_test_email', 'pmat_handle_test_email');
+add_action('wp_ajax_export_submissions_csv', 'pmat_handle_export_csv');
 
 // Activation Hook
 register_activation_hook(__FILE__, 'pmat_activate');
@@ -34,7 +35,9 @@ function pmat_activate() {
         name varchar(100) NOT NULL,
         email varchar(100) NOT NULL,
         score int(3) NOT NULL,
-        recommendation varchar(50) NOT NULL,
+        recommendation text NOT NULL,
+        selections text,
+        email_sent tinyint(1) DEFAULT 0,
         submission_date datetime DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY  (id)
     ) $charset_collate;";
@@ -165,8 +168,19 @@ function pmat_handle_assessment_results() {
 
         // Save to database only if email was sent successfully
         global $wpdb;
-        $table_name = $wpdb->prefix . 'pm_assessments';
+        $table_name = $wpdb->prefix . 'pmat_submissions';
         
+        // Before database insert
+        error_log('PM Assessment - Attempting database insert with data: ' . print_r(array(
+            'name' => $name,
+            'email' => $email,
+            'score' => $score,
+            'recommendation' => $recommendation,
+            'selections' => $selections,
+            'email_sent' => 1,
+            'submission_date' => current_time('mysql')
+        ), true));
+
         $insert_result = $wpdb->insert(
             $table_name,
             array(
@@ -176,14 +190,18 @@ function pmat_handle_assessment_results() {
                 'recommendation' => is_array($recommendation) ? json_encode($recommendation) : $recommendation,
                 'selections' => json_encode($selections),
                 'email_sent' => 1,
-                'date_created' => current_time('mysql')
+                'submission_date' => current_time('mysql')
             ),
             array('%s', '%s', '%d', '%s', '%s', '%d', '%s')
         );
 
         if ($insert_result === false) {
             error_log('PM Assessment - Database Error: ' . $wpdb->last_error);
-            // Don't throw exception here as email was sent successfully
+            wp_send_json_error(array(
+                'message' => 'Email sent but failed to save submission. Please contact support.',
+                'error' => $wpdb->last_error
+            ));
+            return;
         }
 
         wp_send_json_success(array(
@@ -322,6 +340,16 @@ function pmat_add_admin_menu() {
         'pm-assessment-settings', // Menu slug
         'pmat_settings_page' // Function to display the page
     );
+
+    // Add hidden submission details page
+    add_submenu_page(
+        null, // No parent - hide from menu
+        'Submission Details',
+        'Submission Details',
+        'manage_options',
+        'pm-assessment-submission-details',
+        'pmat_display_submission_details'
+    );
 }
 
 // Register settings
@@ -352,28 +380,26 @@ function pmat_settings_page() {
     require_once plugin_dir_path(__FILE__) . 'admin/settings.php';
 }
 
-// Enqueue admin scripts and styles
-add_action('admin_enqueue_scripts', 'pmat_admin_enqueue_scripts');
-
-function pmat_admin_enqueue_scripts($hook) {
+// Update the admin enqueue function
+function pmat_enqueue_admin_scripts($hook) {
     // Only load on our plugin pages
     if (strpos($hook, 'pm-assessment') === false) {
         return;
     }
 
-    // Enqueue Chart.js
-    wp_enqueue_script('chartjs', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', true);
-    
-    // Enqueue our admin scripts and styles
-    wp_enqueue_style('pmat-admin-styles', plugins_url('admin/css/admin-style.css', __FILE__));
-    wp_enqueue_script('pmat-admin-script', plugins_url('admin/js/admin-script.js', __FILE__), array('jquery', 'chartjs'), '1.0', true);
-    
-    // Localize script for AJAX
+    // Enqueue Chart.js first
+    wp_enqueue_script('chart-js', 'https://cdn.jsdelivr.net/npm/chart.js', array(), '3.7.0', true);
+
+    // Enqueue our admin script
+    wp_enqueue_script('pmat-admin-script', plugins_url('admin/js/admin-script.js', __FILE__), array('jquery', 'chart-js'), '1.0', true);
+
+    // Localize the script with new data
     wp_localize_script('pmat-admin-script', 'pmatAdmin', array(
         'ajaxurl' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('pmat_admin_nonce')
+        'nonce' => wp_create_nonce('pmat_dashboard_nonce')
     ));
 }
+add_action('admin_enqueue_scripts', 'pmat_enqueue_admin_scripts');
 
 // Deactivation hook
 register_deactivation_hook(__FILE__, 'pmat_deactivate');
@@ -384,115 +410,75 @@ function pmat_deactivate() {
 
 // Update the dashboard data handler
 function pmat_get_dashboard_data() {
-    check_ajax_referer('pmat_admin_nonce', 'nonce');
+    // Verify nonce first
+    if (!check_ajax_referer('pmat_dashboard_nonce', 'nonce', false)) {
+        wp_send_json_error('Invalid nonce');
+        return;
+    }
 
     global $wpdb;
-    $table_name = $wpdb->prefix . 'pm_assessments';
+    $table_name = $wpdb->prefix . 'pmat_submissions';
 
-    // Get data for the last 30 days
+    // Get unique recommendations and their counts
+    $recommendations_data = $wpdb->get_results("
+        SELECT 
+            JSON_UNQUOTE(JSON_EXTRACT(recommendation, '$.title')) as title,
+            COUNT(*) as count
+        FROM {$table_name}
+        WHERE recommendation IS NOT NULL
+        GROUP BY JSON_UNQUOTE(JSON_EXTRACT(recommendation, '$.title'))
+        ORDER BY count DESC
+    ");
+
+    $recommendation_labels = array_map(function($item) {
+        return $item->title;
+    }, $recommendations_data);
+
+    $recommendation_counts = array_map(function($item) {
+        return intval($item->count);
+    }, $recommendations_data);
+
+    // Get assessment dates data (last 30 days)
     $thirty_days_ago = date('Y-m-d', strtotime('-30 days'));
-    
-    // Get all assessments, not just emailed ones
-    $daily_assessments = $wpdb->get_results($wpdb->prepare(
-        "SELECT DATE(date_created) as date, COUNT(*) as count 
-         FROM $table_name 
-         WHERE date_created >= %s 
-         GROUP BY DATE(date_created) 
-         ORDER BY date",
-        $thirty_days_ago
-    ));
+    $assessment_data = $wpdb->get_results($wpdb->prepare("
+        SELECT DATE(submission_date) as date, COUNT(*) as count
+        FROM {$table_name}
+        WHERE submission_date >= %s
+        GROUP BY DATE(submission_date)
+        ORDER BY date ASC
+    ", $thirty_days_ago));
 
-    // Get recommendation distribution for all assessments
-    $recommendations = $wpdb->get_results(
-        "SELECT 
-            CASE 
-                WHEN score >= 80 THEN 'Internal'
-                WHEN score >= 50 THEN 'Hybrid'
-                ELSE 'PMaaS'
-            END as recommendation,
-            COUNT(*) as count 
-         FROM $table_name 
-         GROUP BY 
-            CASE 
-                WHEN score >= 80 THEN 'Internal'
-                WHEN score >= 50 THEN 'Hybrid'
-                ELSE 'PMaaS'
-            END"
-    );
-
-    // Get daily emails (where email_sent = 1)
-    $daily_emails = $wpdb->get_results($wpdb->prepare(
-        "SELECT DATE(date_created) as date, COUNT(*) as count 
-         FROM $table_name 
-         WHERE email_sent = 1 
-         AND date_created >= %s 
-         GROUP BY DATE(date_created) 
-         ORDER BY date",
-        $thirty_days_ago
-    ));
-
-    // Format data for charts
     $dates = array();
     $assessments = array();
-    $emailDates = array();
-    $emailsSent = array();
-    $recommendationCounts = array(0, 0, 0); // PMaaS, Hybrid, Internal
-
-    // Fill in missing dates with zero counts for assessments
-    $date = new DateTime($thirty_days_ago);
-    $end_date = new DateTime();
-    $daily_data = array();
-
-    while ($date <= $end_date) {
-        $current_date = $date->format('Y-m-d');
-        $dates[] = $date->format('M j');
-        $daily_data[$current_date] = 0;
-        $date->modify('+1 day');
+    foreach ($assessment_data as $row) {
+        $dates[] = $row->date;
+        $assessments[] = intval($row->count);
     }
 
-    // Process daily assessments
-    foreach ($daily_assessments as $day) {
-        $daily_data[$day->date] = (int)$day->count;
-    }
-    $assessments = array_values($daily_data);
+    // Get email data (last 30 days)
+    $email_data = $wpdb->get_results($wpdb->prepare("
+        SELECT DATE(submission_date) as date, COUNT(*) as count
+        FROM {$table_name}
+        WHERE submission_date >= %s AND email_sent = 1
+        GROUP BY DATE(submission_date)
+        ORDER BY date ASC
+    ", $thirty_days_ago));
 
-    // Process recommendation distribution
-    foreach ($recommendations as $rec) {
-        switch ($rec->recommendation) {
-            case 'PMaaS':
-                $recommendationCounts[0] = (int)$rec->count;
-                break;
-            case 'Hybrid':
-                $recommendationCounts[1] = (int)$rec->count;
-                break;
-            case 'Internal':
-                $recommendationCounts[2] = (int)$rec->count;
-                break;
-        }
+    $email_dates = array();
+    $emails_sent = array();
+    foreach ($email_data as $row) {
+        $email_dates[] = $row->date;
+        $emails_sent[] = intval($row->count);
     }
 
-    // Fill in missing dates with zero counts for emails
-    $email_data = array();
-    $date->setTimestamp(strtotime($thirty_days_ago));
-    while ($date <= $end_date) {
-        $current_date = $date->format('Y-m-d');
-        $emailDates[] = $date->format('M j');
-        $email_data[$current_date] = 0;
-        $date->modify('+1 day');
-    }
-
-    // Process daily emails
-    foreach ($daily_emails as $day) {
-        $email_data[$day->date] = (int)$day->count;
-    }
-    $emailsSent = array_values($email_data);
-
+    // Make sure we exit properly with JSON response
     wp_send_json_success(array(
         'dates' => $dates,
         'assessments' => $assessments,
-        'recommendations' => $recommendationCounts,
-        'emailDates' => $emailDates,
-        'emailsSent' => $emailsSent
+        'recommendationLabels' => $recommendation_labels,
+        'recommendations' => $recommendation_counts,
+        'emailDates' => $email_dates,
+        'emailsSent' => $emails_sent
     ));
 }
 
@@ -573,3 +559,89 @@ require_once plugin_dir_path(__FILE__) . 'includes/class-plugin-updater.php';
 if (is_admin()) {
     new PMAT_Plugin_Updater(__FILE__);
 }
+
+// Update the AJAX handler to accept specific IDs
+function pmat_handle_export_csv() {
+    check_admin_referer('export_submissions_csv');
+    
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'pmat_submissions';
+
+    // Check if specific submissions were selected
+    $submission_ids = isset($_POST['submissions']) ? array_map('intval', $_POST['submissions']) : array();
+
+    // Build query
+    $sql = "SELECT * FROM $table_name";
+    if (!empty($submission_ids)) {
+        $ids = implode(',', $submission_ids);
+        $sql .= " WHERE id IN ($ids)";
+    }
+    $sql .= " ORDER BY submission_date DESC";
+
+    // Get submissions
+    $items = $wpdb->get_results($sql);
+
+    // Set headers for download
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="PM Assessments.csv"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+
+    // Create output
+    $output = fopen('php://output', 'w');
+
+    // Add UTF-8 BOM
+    fputs($output, "\xEF\xBB\xBF");
+
+    // Add headers
+    fputcsv($output, array(
+        'Date',
+        'Name',
+        'Email',
+        'Score',
+        'Recommendation',
+        'Answers'
+    ));
+
+    // Add data rows
+    foreach ($items as $item) {
+        $recommendation = json_decode($item->recommendation, true);
+        $selections = json_decode($item->selections, true);
+        
+        // Format answers
+        $answers = array();
+        if (is_array($selections)) {
+            foreach ($selections as $selection) {
+                $answers[] = $selection['question'] . ': ' . $selection['answer'];
+            }
+        }
+
+        fputcsv($output, array(
+            wp_date('Y-m-d H:i:s', strtotime($item->submission_date)),
+            $item->name,
+            $item->email,
+            $item->score . '%',
+            $recommendation['title'] ?? '',
+            implode("\n", $answers)
+        ));
+    }
+
+    fclose($output);
+    wp_die();
+}
+
+// Add the callback function
+function pmat_display_submission_details() {
+    require_once plugin_dir_path(__FILE__) . 'admin/submission-details.php';
+}
+
+// Add this to your main plugin file where you initialize admin pages
+
+function pmat_admin_init() {
+    // Remove any error classes that might be added incorrectly
+    add_filter('admin_body_class', function($classes) {
+        $classes = str_replace('php-error', '', $classes);
+        return $classes;
+    }, 99); // High priority to run after other filters
+}
+add_action('admin_init', 'pmat_admin_init');
